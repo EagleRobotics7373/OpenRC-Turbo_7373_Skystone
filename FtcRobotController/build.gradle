@@ -31,12 +31,14 @@ dependencies {
     turboImplementation project(':Hardware')
     turboImplementation project(':RobotServer')
     turboImplementation project(':OpenRC')
+    turboImplementation 'com.acmerobotics.dashboard:dashboard:0.3.4'
 
     extremeTurboImplementation project(':FtcCommon')
     extremeTurboImplementation project(':RobotCore')
     extremeTurboImplementation project(':Inspection')
     extremeTurboImplementation project(':Hardware')
     extremeTurboImplementation project(':OpenRC')
+    extremeTurboImplementation  'com.acmerobotics.dashboard:dashboard:0.3.4'
 
     stockApi 'org.openftc:ftccommon-stock:5.3'
     stockApi 'org.openftc:robotcore-stock:5.3'
@@ -58,4 +60,5 @@ dependencies {
      * External
      */
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.acmerobotics.dashboard:dashboard:0.3.4'
 }
