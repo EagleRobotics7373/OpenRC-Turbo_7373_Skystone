@@ -33,7 +33,7 @@ public class Autonomous extends LinearOpMode {
         robot = new BasicRobot(hardwareMap);
         imuController = new IMUController(hardwareMap, AxesOrder.ZYX);
         AutoMenuControllerIterative menuController = new AutoMenuControllerIterative(telemetry);
-
+        robot.intakeBlockGrabber.release();
 
         /*
                 Operate telemetry menu
@@ -67,7 +67,7 @@ public class Autonomous extends LinearOpMode {
             telemetry.addData("d", pidf.d);
             telemetry.addData("f", pidf.f);
             telemetry.update();
-            sleep(5000);
+//            sleep(5000);
         /*
                 Robot Actions
          */
@@ -97,8 +97,8 @@ public class Autonomous extends LinearOpMode {
         //                // Rotate 180 degrees using IMU PI controller
         //                imuPIRotate(180);
 
-                        // Find distance away from the wall
-                        double distWall = 42 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
+                        // Find distance away from the wall (REMOVED)
+//                        double distWall = 42 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
                         drive(0, -29, 0.2);
@@ -110,21 +110,21 @@ public class Autonomous extends LinearOpMode {
 
                         // Drive back to the wall
     //                    drive(0, 32, 0.7);
-                        timeDrive(0, 1, 0, 2000);
+                        timeDrive(0, 0.5, 0, 2000);
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
                         sleep(500);
 
                         // Drive toward the alliance bridge to start moving around the foundation
-                        drive(30, 0, 0.7);
+                        drive(30, 0, 0.2);
                         // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -18, 0.7);
-                        drive(-20, 0, 0.7);
+                        drive(0, -18, 0.2);
+                        drive(-20, 0, 0.2);
 
                         // Park under the bridge
-                        drive(23, 0, 0.2);
-                        if (menuController.getParkNearDS()) timeDrive(0,0.8, 0, 1000);
-                        else timeDrive(0, -0.5, 0, 500);
+                        drive(23, 0, 0.6);
+                        if (menuController.getParkNearDS()) timeDrive(0,0.3, 0, 1000);
+                        else timeDrive(0, -0.3, 0, 500);
                     } else { // Blue side waffle
                         // Drive forward to clear the wall
         //                drive(0, 5, 0.4);
@@ -133,30 +133,31 @@ public class Autonomous extends LinearOpMode {
         //                double distWall = 44 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
-                        drive(0, -29, 0.2);
+                        drive(0, -29, 0.3);
                         sleep(250);
-
+                        telemetry.addData("blab blab blab", "wow taco");
+                        telemetry.update();
                         // Deploy the foundation grabber, grabbing the foundation
                         robot.foundationGrabbers.lock();
                         sleep(2000);
 
                         // Drive back to the wall
 //                        drive(0, 36, 0.2);
-                        timeDrive(0, 1, 0, 2000);
+                        timeDrive(0, 0.5, 0, 2000);
 
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
                         sleep(500);
 
                         // Drive toward the alliance bridge to start moving around the foundation
-                        drive(-32, 0, 0.7);
+                        drive(-32, 0, 0.2);
                         // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -15.5, 0.7);
+                        drive(0, -17, 0.2);
                         //push foundation
-                        drive(20, 0, 0.5);
+                        drive(20, 0, 0.2);
                         sleep(1000);
                         // drive back
-                        drive(-26, 0, 0.7);
+                        drive(-26, 0, 0.2);
                         if(menuController.getParkNearDS()) drive(0, 24,0.2);
                         else {
                             timeDrive(0, -0.4, 0, 500);
@@ -193,7 +194,7 @@ public class Autonomous extends LinearOpMode {
                     if (menuController.getAllianceColor()==AllianceColor.RED) {
                         switch (skystonePosition) {
                             case CENTER:
-                                driveToSkystoneDist = 2.0;
+                                driveToSkystoneDist = 0.0;
                                 break;
                             case RIGHT:
                                 driveToSkystoneDist = -7.0;
@@ -217,13 +218,19 @@ public class Autonomous extends LinearOpMode {
                     }
 
                     // Drive forwards or back to align with
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            doArmLift();
+                        }
+                    }).start();
                     drive(0, driveToSkystoneDist, 0.2);
                     sleep(2000);
                     // Rotate to face Skystone
                     imuPIRotate(-88.0);
 
                     // PI controller for lifting arm
-                    doArmLift();
+
 
                     /*
 
@@ -231,53 +238,54 @@ public class Autonomous extends LinearOpMode {
                     Check location of these blocks in case below y value needs to be increased/decreased!!!
 
                      */
-                    double targetValue = 18.7;
+                    double targetValue = 27.0;
                     double currentValue;
-                    double P = 0.03;
+                    double P = 0.04;
 
-                    while (!MathExtensionsKt.withinRange(currentValue = robot.distanceSensor_front.getDistance(DistanceUnit.CM), targetValue, 0.3)) {
-                        robot.holonomic.runWithoutEncoder(0,MathExtensionsKt.upperLimit(P * (currentValue-targetValue), 0.5),0);
+                    while (opModeIsActive() && !MathExtensionsKt.withinRange(currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM), targetValue, 1.5)) {
+                        robot.holonomic.runWithoutEncoder(0,MathExtensionsKt.upperLimit(P * (currentValue-targetValue), 0.15),0);
                         telemetry.addData("Target", targetValue);
                         telemetry.addData("Current", currentValue);
                         telemetry.update();
                     }
 
     //                drive(0, 16, 0.2);
-                    sleep(750);
+
+                    while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.68) robot.intakePivotMotor.setPower(0.01);
+                    robot.intakePivotMotor.setPower(0.12);
+                    drive(0,4,0.2);
+                    robot.intakeBlockGrabber.hold();
                     robot.intakeBlockManipulator.setPower(1);
-
                     robot.intakePivotMotor.setPower(0.0);
-                    robot.holonomic.runWithoutEncoder(0,-0.12,0);
-                    sleep(500);
-                    robot.holonomic.stop();
                     sleep(1500);
-
-                    doArmLift();
-
-                    drive(0, -6, 0.4);
-
+                    drive(0, -15, 0.4);
+//                    doArmLift();
                     double intoBuildingZoneDist = 0.0;
                     if (menuController.getAllianceColor() == AllianceColor.RED) {
                         switch (skystonePosition) {
                             case LEFT: intoBuildingZoneDist+=8;
                             case CENTER: intoBuildingZoneDist+=8;
-                            case RIGHT: intoBuildingZoneDist+=40;
+                            case RIGHT: intoBuildingZoneDist+=44;
                         }
                     } else {
                         switch (skystonePosition) {
                             case RIGHT: intoBuildingZoneDist-=8;
                             case CENTER: intoBuildingZoneDist-=8;
-                            case LEFT: intoBuildingZoneDist-=40;
+                            case LEFT: intoBuildingZoneDist-=44;
 
                         }
                     }
-                    drive(intoBuildingZoneDist, 0, 0.3);
+                    drive(intoBuildingZoneDist, 0, 0.2);
+                    doArmLift();
+                    robot.intakeBlockGrabber.release();
+                    robot.intakeBlockManipulator.setPower(-1);
+                    sleep(500);
+                    robot.intakePivotMotor.setPower(0.0);
 
-                    robot.intakeBlockManipulator.setPower(-1.0);
 
                     if (menuController.getAllianceColor() == AllianceColor.RED) drive(-20,0,0.2);
                     else drive(20, 0, 0.2);
-
+                    robot.intakePivotMotor.setPower(0.0);
                     if (menuController.getParkNearDS()) timeDrive(0, -0.7, 0, 750);
                     else                                timeDrive(0, 0.4, 0, 750);
                 }
@@ -296,7 +304,7 @@ public class Autonomous extends LinearOpMode {
         double targetValue = currentValue + angle;
 
         double Kp = .02; // Proportional Constant
-        double Ki = .0002; // Integral Constant
+        double Ki = .0007; // Integral Constant
         double et; // Error
         double proportionPower;
         double integralPower;
@@ -333,22 +341,21 @@ public class Autonomous extends LinearOpMode {
             telemetry.addData("intPw", integralPower);
             telemetry.addData("errorsum", errorSum);
             telemetry.addData("Power", power);
-            robot.holonomic.runWithoutEncoder(0,0,power);
+            robot.holonomic.runWithoutEncoder(0,0,power*0.30);
             telemetry.update();
         }
         robot.holonomic.stop();
     }
 
     private void doArmLift() {
-        double currentValue = 0;
+        double currentValue = 2.0;
         double targetValue = 1.257;
         double PPower = 4.0;
         double originalRuntime = getRuntime();
-        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<2) {
-            currentValue = robot.intakePivotPotentiometer.getVoltage();
+        while ((currentValue=robot.intakePivotPotentiometer.getVoltage()) > targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<1) {
             robot.intakePivotMotor.setPower(-PPower * (targetValue-robot.intakePivotPotentiometer.getVoltage()));
         }
-        robot.intakePivotMotor.setPower(0.05);
+        robot.intakePivotMotor.setPower(0.12);
     }
 
     private void timeDrive(double x, double y, double z, long timeMs) {
