@@ -206,7 +206,7 @@ public class Autonomous extends LinearOpMode {
                     } else {
                         switch (skystonePosition) {
                             case CENTER:
-                                driveToSkystoneDist = 2.75;
+                                driveToSkystoneDist = 0.75;
                                 break;
                             case RIGHT:
                                 driveToSkystoneDist = -6.0;
@@ -238,27 +238,34 @@ public class Autonomous extends LinearOpMode {
                     Check location of these blocks in case below y value needs to be increased/decreased!!!
 
                      */
-                    double targetValue = 27.0;
+                    double targetValue = 30.0;
                     double currentValue;
                     double P = 0.04;
-
-                    while (opModeIsActive() && !MathExtensionsKt.withinRange(currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM), targetValue, 1.5)) {
+                    double timeAtLastChange = getRuntime();
+                    double lastValue = 100;
+                    while (opModeIsActive() && !MathExtensionsKt.withinRange(currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM), targetValue, 1.5) && (getRuntime() - timeAtLastChange)<1.5) {
                         robot.holonomic.runWithoutEncoder(0,MathExtensionsKt.upperLimit(P * (currentValue-targetValue), 0.15),0);
                         telemetry.addData("Target", targetValue);
                         telemetry.addData("Current", currentValue);
+                        telemetry.addData("Last Time", timeAtLastChange);
+                        telemetry.addData("Last Change", lastValue);
                         telemetry.update();
+                        if (currentValue != lastValue) {
+                            lastValue = currentValue;
+                            timeAtLastChange = getRuntime();
+                        }
                     }
 
     //                drive(0, 16, 0.2);
 
                     while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.68) robot.intakePivotMotor.setPower(0.01);
                     robot.intakePivotMotor.setPower(0.12);
-                    drive(0,4,0.2);
+                    drive(0,5,0.2);
                     robot.intakeBlockGrabber.hold();
                     robot.intakeBlockManipulator.setPower(1);
                     robot.intakePivotMotor.setPower(0.0);
                     sleep(1500);
-                    drive(0, -15, 0.4);
+                    drive(0, -14, 0.4);
 //                    doArmLift();
                     double intoBuildingZoneDist = 0.0;
                     if (menuController.getAllianceColor() == AllianceColor.RED) {

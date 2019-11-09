@@ -12,10 +12,10 @@ import kotlin.math.absoluteValue
 open class TeleOpRD : OpMode() {
     lateinit var robot : BasicRobot
 
-    private lateinit var watch_gamepad1_buttonY : ToggleButtonWatcher
-    private lateinit var watch_gamepad1_dpadDown : ToggleButtonWatcher
-    private lateinit var watch_gamepad1_dpadUp : ToggleButtonWatcher
-    private lateinit var watch_gamepad2_rightStickButton : ToggleButtonWatcher
+    protected lateinit var watch_gamepad1_buttonY : ToggleButtonWatcher
+    protected lateinit var watch_gamepad1_dpadDown : ToggleButtonWatcher
+    protected lateinit var watch_gamepad1_dpadUp : ToggleButtonWatcher
+    protected lateinit var watch_gamepad2_rightStickButton : ToggleButtonWatcher
 
     val musicPlayer = ExtDirMusicPlayer(ExtMusicFile.UNITY)
     var playingMusic = false
@@ -102,8 +102,9 @@ open class TeleOpRD : OpMode() {
 
         robot.intakePivotMotor.power =
                 when {
-                    input > 0.0 -> input+0.02
-                    else -> 0.02 - -input*0.04
+                    (gamepad2.right_bumper)-> if (input > 0.0) input+0.02 else 0.02 - -input*0.04
+                    input > 0.0 -> input+0.12
+                    else -> 0.12 - -input*0.14
                 }/*.rangeBuffer(-0.10, 0.10, 0.0)*/
 
         // control block grabbing
@@ -129,10 +130,10 @@ open class TeleOpRD : OpMode() {
     private fun controlTelemetry() {
         telemetry.addData("Intake manipulator power", robot.intakeBlockManipulator.power)
         telemetry.addData("Intake pivot power", robot.intakePivotMotor.power)
-        telemetry.addData("Potentiometer voltage", robot.intakePivotPotentiometer.voltage)
-        telemetry.addData("Potentiometer max v", robot.intakePivotPotentiometer.maxVoltage)
-        telemetry.addData("Front dist gD()", robot.frontDistanceSensor.getDistance(DistanceUnit.CM))
-        telemetry.addData("Front dist cU()", robot.frontDistanceSensor.cmUltrasonic())
+//        telemetry.addData("Potentiometer voltage", robot.intakePivotPotentiometer.voltage)
+//        telemetry.addData("Potentiometer max v", robot.intakePivotPotentiometer.maxVoltage)
+//        telemetry.addData("Front dist gD()", robot.frontDistanceSensor.getDistance(DistanceUnit.CM))
+//        telemetry.addData("Front dist cU()", robot.frontDistanceSensor.cmUltrasonic())
         telemetry.addData("Speed", speed)
         telemetry.addData("Reverse", reverse)
 //        telemetry.addData("Hue in range?", robot.intakeBlockCSensor.rhue in 0.32..0.41)
@@ -146,7 +147,7 @@ open class TeleOpRD : OpMode() {
         intakeD = d
     }
 
-    private class ToggleButtonWatcher(private val getMethod: ()->Boolean) {
+    protected class ToggleButtonWatcher(private val getMethod: ()->Boolean) {
         private var lastState : Boolean = getMethod()
         fun call(): Boolean {
             if (getMethod()) {

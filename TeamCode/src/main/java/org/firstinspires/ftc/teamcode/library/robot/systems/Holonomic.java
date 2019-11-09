@@ -55,7 +55,7 @@ public class Holonomic extends Drivetrain {
 
         ((DcMotorEx)frontLeftMotor).setPositionPIDFCoefficients(1.5);
         ((DcMotorEx)backLeftMotor).setPositionPIDFCoefficients(1.5);
-        ((DcMotorEx)frontRightMotor).setPositionPIDFCoefficients(1.5);
+        ((DcMotorEx)frontRightMotor).setPositionPIDFCoefficients(1.8);
         ((DcMotorEx)backRightMotor).setPositionPIDFCoefficients(1.5);
 
         if (chassis == Chassis.SSGOBILDA) {
