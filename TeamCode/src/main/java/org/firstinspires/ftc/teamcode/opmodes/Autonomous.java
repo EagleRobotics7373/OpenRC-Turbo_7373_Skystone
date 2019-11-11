@@ -10,7 +10,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.teamcode.library.functions.AllianceColor;
 import org.firstinspires.ftc.teamcode.library.functions.ExtDirMusicPlayer;
-import org.firstinspires.ftc.teamcode.library.functions.ExtMusicFile;
 import org.firstinspires.ftc.teamcode.library.functions.FieldSide;
 import org.firstinspires.ftc.teamcode.library.functions.MathExtensionsKt;
 import org.firstinspires.ftc.teamcode.library.functions.Point3D;
@@ -91,6 +90,7 @@ public class Autonomous extends LinearOpMode {
             else{
                 if (menuController.getStartingPosition()== FieldSide.WAFFLE_SIDE) {
                     if (menuController.getAllianceColor()== AllianceColor.RED) {
+                        if (menuController.getBuildingSiteSlide()) drive(-24, 0, 0.8);
                         // Drive forward to clear the wall
         //                drive(0, 5, 0.7);
         //                sleep(500);
@@ -101,7 +101,7 @@ public class Autonomous extends LinearOpMode {
 //                        double distWall = 42 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
-                        drive(0, -29, 0.2);
+                        drive(0, -29, 0.4);
                         sleep(250);
 
                         // Deploy the foundation grabber, grabbing the foundation
@@ -115,17 +115,21 @@ public class Autonomous extends LinearOpMode {
                         robot.foundationGrabbers.unlock();
                         sleep(500);
 
-                        // Drive toward the alliance bridge to start moving around the foundation
-                        drive(30, 0, 0.2);
-                        // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -18, 0.2);
-                        drive(-20, 0, 0.2);
+                        if (menuController.getParkAfterTask()) {
+                            // Drive toward the alliance bridge to start moving around the foundation
+                            drive(30, 0, 0.2);
+                            // Drive parallel to the bridges to move to the other side of the foundation
+                            drive(0, -18, 0.2);
+                            drive(-20, 0, 0.2);
 
-                        // Park under the bridge
-                        drive(23, 0, 0.6);
-                        if (menuController.getParkNearDS()) timeDrive(0,0.3, 0, 1000);
-                        else timeDrive(0, -0.3, 0, 500);
+                            // Park under the bridge
+                            drive(23, 0, 0.6);
+                            if (menuController.getParkNearDS()) timeDrive(0,0.3, 0, 1000);
+                            else timeDrive(0, -0.3, 0, 500);
+                        }
+
                     } else { // Blue side waffle
+                        if (menuController.getBuildingSiteSlide()) drive(24, 0, 0.7);
                         // Drive forward to clear the wall
         //                drive(0, 5, 0.4);
         //                sleep(500);
@@ -133,7 +137,7 @@ public class Autonomous extends LinearOpMode {
         //                double distWall = 44 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
-                        drive(0, -29, 0.3);
+                        drive(0, -29, 0.4);
                         sleep(250);
                         telemetry.addData("blab blab blab", "wow taco");
                         telemetry.update();
@@ -148,22 +152,24 @@ public class Autonomous extends LinearOpMode {
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
                         sleep(500);
-
-                        // Drive toward the alliance bridge to start moving around the foundation
-                        drive(-32, 0, 0.2);
-                        // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -17, 0.2);
-                        //push foundation
-                        drive(20, 0, 0.2);
-                        sleep(1000);
-                        // drive back
-                        drive(-26, 0, 0.2);
-                        if(menuController.getParkNearDS()) drive(0, 24,0.2);
-                        else {
-                            timeDrive(0, -0.4, 0, 500);
-                            sleep(500);
-                            robot.holonomic.stop();
+                        if (menuController.getParkAfterTask()) {
+                            // Drive toward the alliance bridge to start moving around the foundation
+                            drive(-35, 0, 0.2);
+                            // Drive parallel to the bridges to move to the other side of the foundation
+                            drive(0, -17, 0.2);
+                            //push foundation
+                            drive(20, 0, 0.2);
+                            sleep(1000);
+                            // drive back
+                            drive(-26, 0, 0.2);
+                            if(menuController.getParkNearDS()) drive(0, 24,0.2);
+                            else {
+                                timeDrive(0, -0.4, 0, 500);
+                                sleep(500);
+                                robot.holonomic.stop();
+                            }
                         }
+
                     }
                 }
                 else { // FIELD POSITION IS LOADING ZONE!!!
@@ -238,12 +244,12 @@ public class Autonomous extends LinearOpMode {
                     Check location of these blocks in case below y value needs to be increased/decreased!!!
 
                      */
-                    double targetValue = 30.0;
+                    double targetValue = 33.0;
                     double currentValue;
                     double P = 0.04;
                     double timeAtLastChange = getRuntime();
                     double lastValue = 100;
-                    while (opModeIsActive() && !MathExtensionsKt.withinRange(currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM), targetValue, 1.5) && (getRuntime() - timeAtLastChange)<1.5) {
+                    while (opModeIsActive() && ((currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM))>targetValue) && (menuController.getSkystoneRedundancy()?((getRuntime() - timeAtLastChange) < 1.5):true)) {
                         robot.holonomic.runWithoutEncoder(0,MathExtensionsKt.upperLimit(P * (currentValue-targetValue), 0.15),0);
                         telemetry.addData("Target", targetValue);
                         telemetry.addData("Current", currentValue);
@@ -255,7 +261,7 @@ public class Autonomous extends LinearOpMode {
                             timeAtLastChange = getRuntime();
                         }
                     }
-
+                    robot.holonomic.stop();
     //                drive(0, 16, 0.2);
 
                     while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.68) robot.intakePivotMotor.setPower(0.01);
