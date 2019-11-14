@@ -24,7 +24,7 @@ public class Holonomic extends Drivetrain {
     private static final double ANGLE_RIGHT_REAR = 135;
     private static final double ANGLE_RIGHT_FRONT = 225;
 
-    private static final int TARGET_POSITION_TOLERANCE = 30;
+    private static final int TARGET_POSITION_TOLERANCE = 90;
 
     static {
         WHEEL_CIRCUMFERENCE = (WHEEL_DIAMETER * Math.PI);

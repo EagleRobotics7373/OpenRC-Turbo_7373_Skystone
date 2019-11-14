@@ -52,6 +52,17 @@ public class Autonomous extends LinearOpMode {
                while (gamepad1.dpad_right && !isStopRequested());
            }
         }
+
+        VuforiaLocalizer vuforia = VisionInitializer.createVuforia(VisionInitializer.CameraType.PHONE_REAR, hardwareMap);
+        VuforiaController vuforiaController = new VuforiaController(vuforia, telemetry);
+        vuforiaController.activate();
+
+        Point3D vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
+        for (int i = 0; i < 5 & vuforiaTargetPoint==null; i++) {
+            vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
+            sleep(500);
+        }
+
         waitForStart();
         if (!isStopRequested()) {
         /*
@@ -82,7 +93,7 @@ public class Autonomous extends LinearOpMode {
 
                     if (menuController.getStartingPosition()==FieldSide.LOADING_ZONE) {
                         if (menuController.getAllianceColor()==AllianceColor.RED) drive(0, -20, 0.5);
-                        else                                                        drive(0, 20, 0.5);
+                        else                                                      drive(0, 20, 0.5);
                     }
                 }
 
@@ -101,31 +112,39 @@ public class Autonomous extends LinearOpMode {
 //                        double distWall = 42 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
-                        drive(0, -29, 0.4);
+                        drive(15 - robot.leftDistanceSensor.getDistance(DistanceUnit.INCH), -29, 0.4);
                         sleep(250);
 
                         // Deploy the foundation grabber, grabbing the foundation
                         robot.foundationGrabbers.lock();
-                        sleep(2000);
+                        sleep(1000);
 
                         // Drive back to the wall
-    //                    drive(0, 32, 0.7);
-                        timeDrive(0, 0.5, 0, 2000);
+                        drive(0, 32, 0.7);
+//                        timeDrive(0, 0.5, 0, 2000);
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
                         sleep(500);
+
 
                         if (menuController.getParkAfterTask()) {
                             // Drive toward the alliance bridge to start moving around the foundation
                             drive(30, 0, 0.2);
                             // Drive parallel to the bridges to move to the other side of the foundation
                             drive(0, -18, 0.2);
-                            drive(-20, 0, 0.2);
+                            drive(-10, 0, 0.2);
 
-                            // Park under the bridge
-                            drive(23, 0, 0.6);
-                            if (menuController.getParkNearDS()) timeDrive(0,0.3, 0, 1000);
-                            else timeDrive(0, -0.3, 0, 500);
+                            drive(60, 14, .7);
+
+                            imuPIRotate(90);
+                            telemetry.addData("heading", MathExtensionsKt.toDegrees(imuController.getHeading()));
+                            telemetry.update();
+                            sleep(2000);
+
+//                            // Park under the bridge
+//                            drive(23, 0, 0.6);
+//                            if (menuController.getParkNearDS()) timeDrive(0,0.3, 0, 1000);
+//                            else timeDrive(0, -0.3, 0, 500);
                         }
 
                     } else { // Blue side waffle
@@ -173,18 +192,20 @@ public class Autonomous extends LinearOpMode {
                     }
                 }
                 else { // FIELD POSITION IS LOADING ZONE!!!
-                    VuforiaLocalizer vuforia = VisionInitializer.createVuforia(VisionInitializer.CameraType.PHONE_REAR, hardwareMap);
-                    VuforiaController vuforiaController = new VuforiaController(vuforia, telemetry);
-                    vuforiaController.activate();
 
                     // Drive closer to the stone to see it more reliably
                     drive(15, 0, .2);
                     sleep(1000);
-                    Point3D vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                    for (int i = 0; i < 5 & vuforiaTargetPoint==null; i++) {
+
+
+                    if (vuforiaTargetPoint == null){
                         vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                        sleep(500);
+                        for (int i = 0; i < 5 & vuforiaTargetPoint==null; i++) {
+                            vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
+                            sleep(500);
+                        }
                     }
+
 
                     Position skystonePosition = Position.RIGHT;
 
@@ -196,6 +217,7 @@ public class Autonomous extends LinearOpMode {
 
                     telemetry.addData("Skystone position", skystonePosition);
                     telemetry.update();
+                    sleep(5000);
                     double driveToSkystoneDist;
                     if (menuController.getAllianceColor()==AllianceColor.RED) {
                         switch (skystonePosition) {
@@ -203,7 +225,7 @@ public class Autonomous extends LinearOpMode {
                                 driveToSkystoneDist = 0.0;
                                 break;
                             case RIGHT:
-                                driveToSkystoneDist = -7.0;
+                                driveToSkystoneDist = -6.0;
                                 break;
                             default:
                                 driveToSkystoneDist = 10.5;
@@ -244,7 +266,12 @@ public class Autonomous extends LinearOpMode {
                     Check location of these blocks in case below y value needs to be increased/decreased!!!
 
                      */
-                    double targetValue = 33.0;
+
+                    telemetry.addData("frontdistance", robot.frontDistanceSensor);
+                    telemetry.update();
+                    sleep(3000);
+
+                    double targetValue = 35.0;
                     double currentValue;
                     double P = 0.04;
                     double timeAtLastChange = getRuntime();
@@ -324,7 +351,7 @@ public class Autonomous extends LinearOpMode {
         double power;
         double errorSum = 0;
         double originalRuntime = getRuntime();
-        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<3) {
+        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<4) {
             currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
             telemetry.addData("Current value", currentValue);
             telemetry.addData("Target value", targetValue);
