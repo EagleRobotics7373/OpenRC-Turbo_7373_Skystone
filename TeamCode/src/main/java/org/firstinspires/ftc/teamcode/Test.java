@@ -25,9 +25,16 @@ public class Test extends LinearOpMode {
         // wait for the start button to be pressed
         waitForStart();
 
+        while (opModeIsActive()) {
+            turn(180, 0.5);
+            System.out.println("BEN");
+            sleep(500);
+        }
+
 
         while (opModeIsActive()) {
 
+            telemetry.addData("voltage", robot.intakePivotPotentiometer.getVoltage());
             telemetry.addData("left", robot.leftDistanceSensor.getDistance(DistanceUnit.INCH));
             telemetry.addData("right", robot.rightDistanceSensor.getDistance(DistanceUnit.INCH));
             telemetry.addData("front", robot.frontDistanceSensor.getDistance(DistanceUnit.INCH));
@@ -56,70 +63,25 @@ public class Test extends LinearOpMode {
         }
     }
 
-    /*public void imuPIRotate(double angle) {
-        double currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
-        double targetValue = currentValue + angle;
-
-        double Kp = .02; // Proportional Constant
-        double Ki = .0007; // Integral Constant
-        double et; // Error
-        double proportionPower;
-        double integralPower;
-        double power;
-        double errorSum = 0;
+    private void turn(double degrees, double power) {
+        robot.holonomic.turnUsingEncoder(180, 0.5);
         double originalRuntime = getRuntime();
-        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<3) {
-            currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
-            telemetry.addData("Current value", currentValue);
-            telemetry.addData("Target value", targetValue);
+        while (opModeIsActive() && robot.holonomic.motorsAreBusy() && getRuntime()-originalRuntime < 3);
+    }
 
-            if (currentValue < 0) {
-                currentValue += 360;
-            }
-
-            et = targetValue - currentValue;
-
-            if (Kp * et > .8) {
-                proportionPower = .8;
-            } else {
-                proportionPower = Kp * et;
-            }
-
-            if (et < 45) {
-                errorSum += et;
-            }
-
-            integralPower = Ki * errorSum;
-
-            if (currentValue > 180) {
-                power = (proportionPower + integralPower);
-            } else {
-                power = -(proportionPower + integralPower);
-            }
-
-            telemetry.addData("et", et);
-            telemetry.addData("propPw", proportionPower);
-            telemetry.addData("intPw", integralPower);
-            telemetry.addData("errorsum", errorSum);
-            telemetry.addData("Power", power);
-            robot.holonomic.runWithoutEncoder(0,0,power*0.30);
-            telemetry.update();
-        }
-        robot.holonomic.stop();
-    }*/
     public void imuPIRotate(double angle) {
         double currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
         double targetValue = currentValue + angle;
 
         double Kp = .02; // Proportional Constant
-        double Ki = .0007; // Integral Constant
+        double Ki = .00; // Integral Constant
         double et; // Error
         double proportionPower;
         double integralPower;
         double power;
         double errorSum = 0;
         double originalRuntime = getRuntime();
-        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<3) {
+        while (currentValue != targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<4) {
             currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
             telemetry.addData("Current value", currentValue);
             telemetry.addData("Target value", targetValue);
@@ -131,11 +93,14 @@ public class Test extends LinearOpMode {
             }
 
 
-            if (Kp * et > .8) {
-                proportionPower = .8;
-            } else {
-                proportionPower = Kp * et;
-            }
+//            if (Kp * et > .8) {
+//                proportionPower = .8;
+//            } else {
+//                proportionPower = Kp * et;
+//            }
+
+            proportionPower = Kp * et;
+
 
             if (Math.abs(et) < 45) {
                 errorSum += et;
@@ -149,7 +114,7 @@ public class Test extends LinearOpMode {
             telemetry.addData("intPw", integralPower);
             telemetry.addData("errorsum", errorSum);
             telemetry.addData("Power", power);
-            robot.holonomic.runWithoutEncoder(0,0,power*0.15);
+            robot.holonomic.runWithoutEncoder(0,0,power);
             telemetry.update();
         }
         robot.holonomic.stop();

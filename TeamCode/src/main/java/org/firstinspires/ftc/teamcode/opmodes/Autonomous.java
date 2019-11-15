@@ -190,7 +190,7 @@ public class Autonomous extends LinearOpMode {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            doArmLift();
+                            doArmLift(1.68);
                         }
                     }).start();
 
@@ -218,7 +218,63 @@ public class Autonomous extends LinearOpMode {
                     sleep(500);
                     robot.intakeBlockManipulator.setPower(1);
                     sleep(250);
-                    drive(0, -7,.4);
+                    drive(0, -9,.4);
+//                    drive(95,0, 0.7);
+//                    timeDrive(0.6, 0, 0, 500);
+                    {
+                        double p1 = 0.0175;
+                        double i1 = 0.0;
+                        double d1 = 0.0;
+                        double c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH);
+                        double t1 = 10.0;
+
+
+                        double p2 = 1.0;
+                        double i2 = 0.0;
+                        double d2 = 0.0;
+                        double t2 = imuController.getHeading();
+
+                        while ((c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH)) > t1 & opModeIsActive() & !Double.isNaN(c1)) {
+                            double e1 = c1 - t1;
+                            double e2 = imuController.getHeading() - t2;
+                            robot.holonomic.runWithoutEncoder(p1 * e1, 0, p2 * e2);
+                            telemetry.addData("x target", t1);
+                            telemetry.addData("x current", c1);
+                            telemetry.addData("x error", e1);
+                            telemetry.addData("heading target", t2);
+                            telemetry.addData("heading error", e2);
+                            telemetry.update();
+                        }
+                    }
+
+                    robot.holonomic.stop();
+
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            doArmLift(1.272);
+                        }
+                    }).start();
+
+                    drive(0, 20, .5);
+                    robot.intakeBlockGrabber.release();
+                    sleep(1000);
+                    drive(0, -7, 0.5);
+                    turn(180, 0.5);
+                    robot.foundationGrabbers.setPosition(0.40);
+                    sleep(500);
+                    drive(0, -5, 0.5);
+                    robot.foundationGrabbers.lock();
+                    sleep(500);
+                    robot.intakePivotMotor.setPower(0);
+                    drive(0, 32, 0.8);
+//                        timeDrive(0, 0.5, 0, 2000);
+                    // Release the foundation grabbers
+                    robot.foundationGrabbers.unlock();
+                    sleep(500);
+
+
+
 
 
                 }
@@ -236,8 +292,8 @@ public class Autonomous extends LinearOpMode {
         double currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
         double targetValue = currentValue + angle;
 
-        double Kp = .02; // Proportional Constant
-        double Ki = .0007; // Integral Constant
+        double Kp = .015; // Proportional Constant
+        double Ki = .00; // Integral Constant
         double et; // Error
         double proportionPower;
         double integralPower;
@@ -280,21 +336,27 @@ public class Autonomous extends LinearOpMode {
         robot.holonomic.stop();
     }
 
-    private void doArmLift() {
+    private void doArmLift(double target) {
         double currentValue = 2.0;
-        double targetValue = 1.68;
+        double targetValue = target;
         double PPower = 2.0;
         double originalRuntime = getRuntime();
         while ((currentValue=robot.intakePivotPotentiometer.getVoltage()) > targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<1) {
             robot.intakePivotMotor.setPower(-PPower * (targetValue-robot.intakePivotPotentiometer.getVoltage()));
         }
-        robot.intakePivotMotor.setPower(0.12);
+        robot.intakePivotMotor.setPower(0.07);
     }
 
     private void timeDrive(double x, double y, double z, long timeMs) {
         robot.holonomic.runWithoutEncoder(x, y, z);
         sleep(timeMs);
         robot.holonomic.stop();
+    }
+
+    private void turn(double degrees, double power) {
+        robot.holonomic.turnUsingEncoder(180, 0.5);
+        double originalRuntime = getRuntime();
+        while (opModeIsActive() && robot.holonomic.motorsAreBusy() && getRuntime()-originalRuntime < 2);
     }
 
     private void drive(double x, double y, double power) {
@@ -304,5 +366,6 @@ public class Autonomous extends LinearOpMode {
 
         }
     }
+
 
 }
