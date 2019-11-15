@@ -28,8 +28,8 @@ public class Test extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-//            telemetry.addData("left", robot.leftDistanceSensor.getDistance(DistanceUnit.INCH));
-//            telemetry.addData("right", robot.rightDistanceSensor.getDistance(DistanceUnit.INCH));
+            telemetry.addData("left", robot.leftDistanceSensor.getDistance(DistanceUnit.INCH));
+            telemetry.addData("right", robot.rightDistanceSensor.getDistance(DistanceUnit.INCH));
             telemetry.addData("front", robot.frontDistanceSensor.getDistance(DistanceUnit.INCH));
             telemetry.addData("heading", MathExtensionsKt.toDegrees(imuController.getHeading()));
             telemetry.update();

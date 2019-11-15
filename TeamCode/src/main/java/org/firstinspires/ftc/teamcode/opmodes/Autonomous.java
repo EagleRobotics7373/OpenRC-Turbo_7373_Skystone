@@ -53,17 +53,8 @@ public class Autonomous extends LinearOpMode {
            }
         }
 
-        VuforiaLocalizer vuforia = VisionInitializer.createVuforia(VisionInitializer.CameraType.PHONE_REAR, hardwareMap);
-        VuforiaController vuforiaController = new VuforiaController(vuforia, telemetry);
-        vuforiaController.activate();
-
-        Point3D vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-        for (int i = 0; i < 5 & vuforiaTargetPoint==null; i++) {
-            vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-            sleep(500);
-        }
-
         waitForStart();
+        double startLeftDist = robot.leftDistanceSensor.getDistance(DistanceUnit.INCH);
         if (!isStopRequested()) {
         /*
                 RoboSpotify
@@ -193,141 +184,43 @@ public class Autonomous extends LinearOpMode {
                 }
                 else { // FIELD POSITION IS LOADING ZONE!!!
 
-                    // Drive closer to the stone to see it more reliably
-                    drive(15, 0, .2);
-                    sleep(1000);
 
 
-                    if (vuforiaTargetPoint == null){
-                        vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                        for (int i = 0; i < 5 & vuforiaTargetPoint==null; i++) {
-                            vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                            sleep(500);
-                        }
-                    }
-
-
-                    Position skystonePosition = Position.RIGHT;
-
-                    if (vuforiaTargetPoint != null) {
-                        telemetry.addData("Skystone y", vuforiaTargetPoint.y);
-                        if (vuforiaTargetPoint.y < 1.0) skystonePosition = Position.LEFT;
-                        else skystonePosition = Position.CENTER;
-                    }
-
-                    telemetry.addData("Skystone position", skystonePosition);
-                    telemetry.update();
-                    sleep(5000);
-                    double driveToSkystoneDist;
-                    if (menuController.getAllianceColor()==AllianceColor.RED) {
-                        switch (skystonePosition) {
-                            case CENTER:
-                                driveToSkystoneDist = 0.0;
-                                break;
-                            case RIGHT:
-                                driveToSkystoneDist = -6.0;
-                                break;
-                            default:
-                                driveToSkystoneDist = 10.5;
-                                break;
-                        }
-                    } else {
-                        switch (skystonePosition) {
-                            case CENTER:
-                                driveToSkystoneDist = 0.75;
-                                break;
-                            case RIGHT:
-                                driveToSkystoneDist = -6.0;
-                                break;
-                            default:
-                                driveToSkystoneDist = 10.5;
-                                break;
-                        }
-                    }
-
-                    // Drive forwards or back to align with
+                    // Lift arm
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             doArmLift();
                         }
                     }).start();
-                    drive(0, driveToSkystoneDist, 0.2);
-                    sleep(2000);
-                    // Rotate to face Skystone
-                    imuPIRotate(-88.0);
 
-                    // PI controller for lifting arm
+                    drive(0, 28, .4);
+                    drive(-25, 0, .4);
+                    drive(-6, 0, .2);
+                    drive(0, 4, .3);
 
+                    Position skystonePosition = Position.RIGHT;
+                    boolean leftIsStone  = ((double)(robot.leftColorSensor.red()+robot.leftColorSensor.green())/2 > 1.5*robot.leftColorSensor.blue());
+                    boolean rightIsStone = ((double)(robot.rightColorSensor.red()+robot.rightColorSensor.green())/2 > 1.5*robot.rightColorSensor.blue());
 
-                    /*
-
-                    IMPORTANT!!! (AKA REALLY IMPORTANT!!!)
-                    Check location of these blocks in case below y value needs to be increased/decreased!!!
-
-                     */
-
-                    telemetry.addData("frontdistance", robot.frontDistanceSensor);
-                    telemetry.update();
-                    sleep(3000);
-
-                    double targetValue = 35.0;
-                    double currentValue;
-                    double P = 0.04;
-                    double timeAtLastChange = getRuntime();
-                    double lastValue = 100;
-                    while (opModeIsActive() && ((currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM))>targetValue) && (menuController.getSkystoneRedundancy()?((getRuntime() - timeAtLastChange) < 1.5):true)) {
-                        robot.holonomic.runWithoutEncoder(0,MathExtensionsKt.upperLimit(P * (currentValue-targetValue), 0.15),0);
-                        telemetry.addData("Target", targetValue);
-                        telemetry.addData("Current", currentValue);
-                        telemetry.addData("Last Time", timeAtLastChange);
-                        telemetry.addData("Last Change", lastValue);
-                        telemetry.update();
-                        if (currentValue != lastValue) {
-                            lastValue = currentValue;
-                            timeAtLastChange = getRuntime();
-                        }
-                    }
-                    robot.holonomic.stop();
-    //                drive(0, 16, 0.2);
-
-                    while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.68) robot.intakePivotMotor.setPower(0.01);
-                    robot.intakePivotMotor.setPower(0.12);
-                    drive(0,5,0.2);
-                    robot.intakeBlockGrabber.hold();
-                    robot.intakeBlockManipulator.setPower(1);
-                    robot.intakePivotMotor.setPower(0.0);
-                    sleep(1500);
-                    drive(0, -14, 0.4);
-//                    doArmLift();
-                    double intoBuildingZoneDist = 0.0;
-                    if (menuController.getAllianceColor() == AllianceColor.RED) {
-                        switch (skystonePosition) {
-                            case LEFT: intoBuildingZoneDist+=8;
-                            case CENTER: intoBuildingZoneDist+=8;
-                            case RIGHT: intoBuildingZoneDist+=44;
-                        }
+                    if (leftIsStone & !rightIsStone)  {
+                        skystonePosition = Position.CENTER;
+                        drive(7,0,0.4);
+                    } else if (!leftIsStone & rightIsStone) {
+                        skystonePosition = Position.LEFT;
+                        drive(22.5,3,0.4);
                     } else {
-                        switch (skystonePosition) {
-                            case RIGHT: intoBuildingZoneDist-=8;
-                            case CENTER: intoBuildingZoneDist-=8;
-                            case LEFT: intoBuildingZoneDist-=44;
-
-                        }
+                        drive(7,0,0.4);
                     }
-                    drive(intoBuildingZoneDist, 0, 0.2);
-                    doArmLift();
-                    robot.intakeBlockGrabber.release();
-                    robot.intakeBlockManipulator.setPower(-1);
+
+                    drive(0,5,0.6);
+                    robot.intakeBlockGrabber.hold();
                     sleep(500);
-                    robot.intakePivotMotor.setPower(0.0);
+                    robot.intakeBlockManipulator.setPower(1);
+                    sleep(250);
+                    drive(0, -7,.4);
 
 
-                    if (menuController.getAllianceColor() == AllianceColor.RED) drive(-20,0,0.2);
-                    else drive(20, 0, 0.2);
-                    robot.intakePivotMotor.setPower(0.0);
-                    if (menuController.getParkNearDS()) timeDrive(0, -0.7, 0, 750);
-                    else                                timeDrive(0, 0.4, 0, 750);
                 }
             }
 
@@ -389,8 +282,8 @@ public class Autonomous extends LinearOpMode {
 
     private void doArmLift() {
         double currentValue = 2.0;
-        double targetValue = 1.257;
-        double PPower = 4.0;
+        double targetValue = 1.68;
+        double PPower = 2.0;
         double originalRuntime = getRuntime();
         while ((currentValue=robot.intakePivotPotentiometer.getVoltage()) > targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<1) {
             robot.intakePivotMotor.setPower(-PPower * (targetValue-robot.intakePivotPotentiometer.getVoltage()));
