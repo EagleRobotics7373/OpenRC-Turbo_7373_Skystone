@@ -25,11 +25,11 @@ public class Test extends LinearOpMode {
         // wait for the start button to be pressed
         waitForStart();
 
-        while (opModeIsActive()) {
-            turn(180, 0.5);
-            System.out.println("BEN");
-            sleep(500);
-        }
+//        while (opModeIsActive()) {
+//            turn(180, 0.5);
+//            System.out.println("BEN");
+//            sleep(500);
+//        }
 
 
         while (opModeIsActive()) {
@@ -73,7 +73,8 @@ public class Test extends LinearOpMode {
         double currentValue = MathExtensionsKt.toDegrees(imuController.getHeading());
         double targetValue = currentValue + angle;
 
-        double Kp = .02; // Proportional Constant
+        // Try Kp constant of .008
+        double Kp = .03; // Proportional Constant
         double Ki = .00; // Integral Constant
         double et; // Error
         double proportionPower;
@@ -86,11 +87,12 @@ public class Test extends LinearOpMode {
             telemetry.addData("Current value", currentValue);
             telemetry.addData("Target value", targetValue);
 
-            if (currentValue < 0) {
-                et = -(Math.abs(targetValue) - Math.abs(currentValue));
-            } else {
-                et = targetValue - currentValue;
-            }
+
+//            if (currentValue < 0) {
+//                et = -(Math.abs(targetValue) - Math.abs(currentValue));
+//            } else {
+//                et = targetValue - currentValue;
+//            }
 
 
 //            if (Kp * et > .8) {
@@ -99,16 +101,21 @@ public class Test extends LinearOpMode {
 //                proportionPower = Kp * et;
 //            }
 
-            proportionPower = Kp * et;
 
+            if (currentValue < 0) {
+                currentValue += 360;
+            }
+
+            et = targetValue - currentValue;
 
             if (Math.abs(et) < 45) {
                 errorSum += et;
             }
 
+            proportionPower = Kp * et;
             integralPower = Ki * errorSum;
-
             power = -(proportionPower + integralPower);
+
             telemetry.addData("et", et);
             telemetry.addData("propPw", proportionPower);
             telemetry.addData("intPw", integralPower);

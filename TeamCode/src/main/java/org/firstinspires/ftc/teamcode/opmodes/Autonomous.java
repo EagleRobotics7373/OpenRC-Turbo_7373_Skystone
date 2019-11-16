@@ -196,8 +196,8 @@ public class Autonomous extends LinearOpMode {
 
                     drive(0, 28, .4);
                     drive(-25, 0, .4);
-                    drive(-6, 0, .2);
-                    drive(0, 4, .3);
+                    drive(-5, 0, .2);
+                    drive(0, 5, .3);
 
                     Position skystonePosition = Position.RIGHT;
                     boolean leftIsStone  = ((double)(robot.leftColorSensor.red()+robot.leftColorSensor.green())/2 > 1.5*robot.leftColorSensor.blue());
@@ -223,10 +223,11 @@ public class Autonomous extends LinearOpMode {
 //                    timeDrive(0.6, 0, 0, 500);
                     {
                         double p1 = 0.0175;
-                        double i1 = 0.0;
+                        double i1 = 0.001;
                         double d1 = 0.0;
                         double c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH);
-                        double t1 = 10.0;
+                        double t1 = 15.0;
+                        double errorSum = 0;
 
 
                         double p2 = 1.0;
@@ -237,7 +238,10 @@ public class Autonomous extends LinearOpMode {
                         while ((c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH)) > t1 & opModeIsActive() & !Double.isNaN(c1)) {
                             double e1 = c1 - t1;
                             double e2 = imuController.getHeading() - t2;
-                            robot.holonomic.runWithoutEncoder(p1 * e1, 0, p2 * e2);
+                            if (e1 <= 15) {
+                                errorSum += e1;
+                            }
+                            robot.holonomic.runWithoutEncoder(p1 * e1 + i1 * errorSum, 0, p2 * e2);
                             telemetry.addData("x target", t1);
                             telemetry.addData("x current", c1);
                             telemetry.addData("x error", e1);
@@ -256,31 +260,40 @@ public class Autonomous extends LinearOpMode {
                         }
                     }).start();
 
-                    drive(0, 20, .5);
+                    drive(0, 12, .5);
                     robot.intakeBlockGrabber.release();
                     sleep(1000);
                     drive(0, -7, 0.5);
+                    double temp = robot.frontDistanceSensor.getDistance(DistanceUnit.INCH);
                     turn(180, 0.5);
                     robot.foundationGrabbers.setPosition(0.40);
                     sleep(500);
-                    drive(0, -5, 0.5);
+                    drive(0, -temp * .9333 + .4216, 0.5);
                     robot.foundationGrabbers.lock();
-                    sleep(500);
+                    sleep(1000);
                     robot.intakePivotMotor.setPower(0);
-                    drive(0, 32, 0.8);
+//                    drive(0, 35, 0.8);
+//                    drive(0, 5, .3);
+                    timeDrive(0, 0.5, 0, 2000);
+
 //                        timeDrive(0, 0.5, 0, 2000);
                     // Release the foundation grabbers
                     robot.foundationGrabbers.unlock();
-                    sleep(500);
+                    sleep(1000);
+                    // Drive toward the alliance bridge to start moving around the foundation
+                    drive(33, 0, 0.2);
+                    // Drive parallel to the bridges to move to the other side of the foundation
+                    drive(0, -18, 0.2);
+                    drive(-25, 0, 0.2);
 
+                    drive(40, 14, .7);
 
-
-
-
+                    imuPIRotate(90);
+                    telemetry.addData("heading", MathExtensionsKt.toDegrees(imuController.getHeading()));
+                    telemetry.update();
+                    sleep(2000);
                 }
             }
-
-
         /*
                 End of OpMode - close resources
          */
