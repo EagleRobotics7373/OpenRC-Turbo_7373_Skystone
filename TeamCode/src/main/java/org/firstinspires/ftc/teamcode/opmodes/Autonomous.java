@@ -23,6 +23,7 @@ import org.firstinspires.ftc.teamcode.library.vision.skystone.VuforiaController;
 public class Autonomous extends LinearOpMode {
     BasicRobot robot;
     IMUController imuController;
+    public static int TIMEMS = 1500;
     @Override
     public void runOpMode() throws InterruptedException {
 
@@ -185,7 +186,7 @@ public class Autonomous extends LinearOpMode {
                 else { // FIELD POSITION IS LOADING ZONE!!!
 
 
-
+                    System.out.println("BEEEEEEEEN");
                     // Lift arm
                     new Thread(new Runnable() {
                         @Override
@@ -195,23 +196,82 @@ public class Autonomous extends LinearOpMode {
                     }).start();
 
                     drive(0, 28, .4);
-                    drive(-25, 0, .4);
-                    drive(-5, 0, .2);
+                    if (menuController.getAllianceColor()==AllianceColor.RED) {
+                        drive(-25, 0, .4);
+                        drive(-5, 0, .2);
+                    }
+                    else {
+                        drive(25, 0, .4);
+                        drive(5, 0, .2);
+                    }
+//                    timeDrive(-0.5, 0, 0, TIMEMS);
+
                     drive(0, 5, .3);
 
                     Position skystonePosition = Position.RIGHT;
-                    boolean leftIsStone  = ((double)(robot.leftColorSensor.red()+robot.leftColorSensor.green())/2 > 1.5*robot.leftColorSensor.blue());
-                    boolean rightIsStone = ((double)(robot.rightColorSensor.red()+robot.rightColorSensor.green())/2 > 1.5*robot.rightColorSensor.blue());
+                    double leftRed;
+                    double leftGreen;
+                    double leftBlue;
+                    double leftBlue15;
+                    double leftRedGreenAvg;
+                    double rightRed;
+                    double rightGreen;
+                    double rightBlue;
+                    double rightBlue15;
+                    double rightRedGreenAvg;
+                    boolean leftIsStone  = ((double)(leftRedGreenAvg=(((leftRed=robot.leftColorSensor.red())+(leftGreen=robot.leftColorSensor.green()))/2)) > (leftBlue15 = 1.5*(leftBlue = robot.leftColorSensor.blue())));
+                    boolean rightIsStone  = ((double)(rightRedGreenAvg=(((rightRed=robot.rightColorSensor.red())+(rightGreen=robot.rightColorSensor.green()))/2)) > (rightBlue15 = 1.5*(rightBlue = robot.rightColorSensor.blue())));
+
 
                     if (leftIsStone & !rightIsStone)  {
-                        skystonePosition = Position.CENTER;
-                        drive(7,0,0.4);
+
+                        if (menuController.getAllianceColor()==AllianceColor.RED) {
+                            skystonePosition = Position.CENTER;
+                            drive(4,0,0.4);
+                        } else {
+                            skystonePosition = Position.RIGHT;
+                            drive(-11.5,0,0.4);
+                        }
+
                     } else if (!leftIsStone & rightIsStone) {
-                        skystonePosition = Position.LEFT;
-                        drive(22.5,3,0.4);
+
+                        if (menuController.getAllianceColor()==AllianceColor.RED) {
+                            skystonePosition = Position.LEFT;
+                            drive(22.5,3,0.4);
+                        } else {
+                            skystonePosition = Position.CENTER;
+                            drive(-4,3,0.4);
+                        }
+
                     } else {
-                        drive(7,0,0.4);
+
+                        if (menuController.getAllianceColor()==AllianceColor.RED) {
+                            skystonePosition = Position.RIGHT;
+                            drive(15,0,0.4);
+                        } else {
+                            skystonePosition = Position.LEFT;
+                            drive(-11.5,3,0.4);
+                        }
+
                     }
+
+                    telemetry.addData("leftIsStone", leftIsStone);
+                    telemetry.addData("leftRed", leftRed);
+                    telemetry.addData("leftGreen", leftGreen);
+                    telemetry.addData("leftBlue", leftBlue);
+                    telemetry.addData("leftBlue 1.5", leftBlue15);
+                    telemetry.addData("leftRG avg", leftRedGreenAvg);
+                    telemetry.addLine();
+                    telemetry.addData("rightIsStone", rightIsStone);
+                    telemetry.addData("rightRed", rightRed);
+                    telemetry.addData("rightGreen", rightGreen);
+                    telemetry.addData("rightBlue", rightBlue);
+                    telemetry.addData("rightBlue 1.5", rightBlue15);
+                    telemetry.addData("rightRG avg", rightRedGreenAvg);
+                    telemetry.addData("Skystone position", skystonePosition);
+                    telemetry.update();
+
+                    sleep(1000);
 
                     drive(0,5,0.6);
                     robot.intakeBlockGrabber.hold();
@@ -223,9 +283,9 @@ public class Autonomous extends LinearOpMode {
 //                    timeDrive(0.6, 0, 0, 500);
                     {
                         double p1 = 0.0175;
-                        double i1 = 0.001;
+                        double i1 = 0.005;
                         double d1 = 0.0;
-                        double c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH);
+                        double c1 = 100.0;
                         double t1 = 15.0;
                         double errorSum = 0;
 
@@ -235,13 +295,17 @@ public class Autonomous extends LinearOpMode {
                         double d2 = 0.0;
                         double t2 = imuController.getHeading();
 
-                        while ((c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH)) > t1 & opModeIsActive() & !Double.isNaN(c1)) {
+                        while (c1 > t1 & opModeIsActive() & !Double.isNaN(c1)) {
+                            if (menuController.getAllianceColor() == AllianceColor.RED) c1 = robot.rightDistanceSensor.getDistance(DistanceUnit.INCH);
+                            else c1 = robot.leftDistanceSensor.getDistance(DistanceUnit.INCH);
+
                             double e1 = c1 - t1;
+                            System.out.println("---------E1 = "+e1);
                             double e2 = imuController.getHeading() - t2;
                             if (e1 <= 15) {
                                 errorSum += e1;
                             }
-                            robot.holonomic.runWithoutEncoder(p1 * e1 + i1 * errorSum, 0, p2 * e2);
+                            robot.holonomic.runWithoutEncoder(-(p1 * e1 + i1 * errorSum), 0, p2 * e2);
                             telemetry.addData("x target", t1);
                             telemetry.addData("x current", c1);
                             telemetry.addData("x error", e1);
@@ -256,17 +320,30 @@ public class Autonomous extends LinearOpMode {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            doArmLift(1.272);
+                            doArmLift(1.237);
                         }
                     }).start();
 
-                    drive(0, 12, .5);
+//                    drive(0, 12, .5);
+                    sleep(500);
+                    double distLeft;
+                    double distRight;
+                    while (opModeIsActive() & ((distLeft = robot.leftColorDistanceSensor.getDistance(DistanceUnit.CM)) > 10 | (distRight = robot.rightColorDistanceSensor.getDistance(DistanceUnit.CM)) > 10 | Double.isNaN(distRight) | Double.isNaN(distLeft)))
+                    {
+                        robot.holonomic.runWithoutEncoder(0, 0.3, 0);
+                        telemetry.addData("dist left",distLeft );
+                        telemetry.addData("dist right", distRight);
+                        telemetry.update();
+                    }
+                    robot.holonomic.stop();
                     robot.intakeBlockGrabber.release();
+                    robot.intakeBlockManipulator.setPower(-1.0);
                     sleep(1000);
-                    drive(0, -7, 0.5);
+                    robot.intakeBlockManipulator.setPower(0.0);
+                    drive(0, -8, 0.5);
                     double temp = robot.frontDistanceSensor.getDistance(DistanceUnit.INCH);
                     turn(180, 0.5);
-                    robot.foundationGrabbers.setPosition(0.40);
+                    robot.foundationGrabbers.setPosition(0.43);
                     sleep(500);
                     drive(0, -temp * .9333 + .4216, 0.5);
                     robot.foundationGrabbers.lock();
@@ -281,17 +358,31 @@ public class Autonomous extends LinearOpMode {
                     robot.foundationGrabbers.unlock();
                     sleep(1000);
                     // Drive toward the alliance bridge to start moving around the foundation
-                    drive(33, 0, 0.2);
-                    // Drive parallel to the bridges to move to the other side of the foundation
-                    drive(0, -18, 0.2);
-                    drive(-25, 0, 0.2);
 
-                    drive(40, 14, .7);
+                    if (menuController.getAllianceColor()==AllianceColor.RED)
+                    {
+                        drive(35, 0, 0.2);
+                        // Drive parallel to the bridges to move to the other side of the foundation
+                        drive(0, -18, 0.2);
+                        drive(-25, 0, 0.2);
+                        drive(35, -5, .7);
+                    }
+                    else
+                    {
+                        drive(-35, 0, 0.2);
+                        // Drive parallel to the bridges to move to the other side of the foundation
+                        drive(0, -18, 0.2);
+                        drive(25, 0, 0.2);
+                        drive(-35, -5, .7);
+                    }
 
-                    imuPIRotate(90);
-                    telemetry.addData("heading", MathExtensionsKt.toDegrees(imuController.getHeading()));
-                    telemetry.update();
-                    sleep(2000);
+
+                    if(menuController.getParkNearDS()) drive(0, 24,0.2);
+                    else {
+                        timeDrive(0, -0.4, 0, 500);
+                        sleep(500);
+                        robot.holonomic.stop();
+                    }
                 }
             }
         /*
@@ -350,12 +441,14 @@ public class Autonomous extends LinearOpMode {
     }
 
     private void doArmLift(double target) {
-        double currentValue = 2.0;
+        double currentValue = 3.0;
         double targetValue = target;
         double PPower = 2.0;
         double originalRuntime = getRuntime();
         while ((currentValue=robot.intakePivotPotentiometer.getVoltage()) > targetValue && opModeIsActive() && (getRuntime()-originalRuntime)<1) {
             robot.intakePivotMotor.setPower(-PPower * (targetValue-robot.intakePivotPotentiometer.getVoltage()));
+            telemetry.addData("Current", currentValue);
+            telemetry.update();
         }
         robot.intakePivotMotor.setPower(0.07);
     }
