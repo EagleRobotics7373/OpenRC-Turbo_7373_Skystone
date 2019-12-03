@@ -18,6 +18,8 @@ import org.firstinspires.ftc.teamcode.library.robot.robotcore.BasicRobot;
 import org.firstinspires.ftc.teamcode.library.robot.robotcore.IMUController;
 import org.firstinspires.ftc.teamcode.library.vision.skystone.VisionFactory;
 import org.firstinspires.ftc.teamcode.library.vision.skystone.VuforiaController;
+import org.firstinspires.ftc.teamcode.library.vision.skystone.opencv.OpenCvContainer;
+import org.firstinspires.ftc.teamcode.library.vision.skystone.opencv.PixelStatsPipeline;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous", group = "Main")
 public class AutonomousMeet4 extends LinearOpMode {
@@ -79,19 +81,7 @@ public class AutonomousMeet4 extends LinearOpMode {
 
             if (menuController.getParkOnly()) {
                 sleep(menuController.getDelayBeforeParking() * 1000);
-                if (!isStopRequested()) {
-                    if (menuController.getStartingPosition() == FieldSide.WAFFLE_SIDE) {
-                        if (menuController.getAllianceColor() == AllianceColor.RED)
-                            drive(36, 0, 0.5);
-                        else drive(-36, 0, 0.5);
-                    }
-
-                    if (menuController.getStartingPosition() == FieldSide.LOADING_ZONE) {
-                        if (menuController.getAllianceColor() == AllianceColor.RED)
-                            drive(0, -20, 0.5);
-                        else drive(0, 20, 0.5);
-                    }
-                }
+                drive(0, 12, 0.5);
 
             } else {
                 if (menuController.getStartingPosition() == FieldSide.WAFFLE_SIDE) {
@@ -116,7 +106,7 @@ public class AutonomousMeet4 extends LinearOpMode {
                         sleep(1000);
 
                         // Drive back to the wall
-                        drive(0, -32, 0.7);
+                        timeDrive(0, -0.5, 0, 2000);
 //                        timeDrive(0, 0.5, 0, 2000);
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
@@ -155,9 +145,9 @@ public class AutonomousMeet4 extends LinearOpMode {
                                 drive(-16, 0, 0.5);
                                 drive(0, 8, 0.4);
                             }
-                            if (menuController.getParkNearDS()) drive(0, 24, 0.2);
+                            if (menuController.getParkNearDS()) drive(0, -24, 0.2);
                             else {
-                                timeDrive(0, -0.4, 0, 500);
+                                timeDrive(0, 0.4, 0, 500);
                                 sleep(500);
                                 robot.holonomic.stop();
                             }
@@ -165,7 +155,7 @@ public class AutonomousMeet4 extends LinearOpMode {
 
                     } else { // Blue side waffle
                         double startingRuntime = getRuntime();
-                        if (menuController.getBuildingSiteSlide()) drive(24, 0, 0.7);
+                        if (menuController.getBuildingSiteSlide()) drive(-24, 0, 0.7);
                         // Drive forward to clear the wall
                         //                drive(0, 5, 0.4);
                         //                sleep(500);
@@ -173,7 +163,7 @@ public class AutonomousMeet4 extends LinearOpMode {
                         //                double distWall = 44 - robot.distanceSensor_side.getDistance(DistanceUnit.INCH);
 
                         // Drive to the foundation
-                        drive(0, -29, 0.4);
+                        drive(0, 29, 0.4);
                         sleep(250);
                         telemetry.addData("blab blab blab", "wow taco");
                         telemetry.update();
@@ -183,29 +173,29 @@ public class AutonomousMeet4 extends LinearOpMode {
 
                         // Drive back to the wall
 //                        drive(0, 36, 0.2);
-                        timeDrive(0, 0.5, 0, 2000);
+                        timeDrive(0, -0.5, 0, 2000);
 
                         // Release the foundation grabbers
                         robot.foundationGrabbers.unlock();
                         sleep(500);
                         if (menuController.getParkAfterTask()) {
                             // Drive toward the alliance bridge to start moving around the foundation
-                            drive(-35, 0, 0.2);
+                            drive(35, 0, 0.2);
                             // Drive parallel to the bridges to move to the other side of the foundation
                             if (menuController.getFoundationRedundancy()) {
-                                drive(0, -17, 0.2);
+                                drive(0, 17, 0.2);
                                 //push foundation
-                                drive(20, 0, 0.2);
+                                drive(-20, 0, 0.2);
                                 sleep(1000);
                                 // drive back
-                                drive(-26, 0, 0.2);
+                                drive(26, 0, 0.2);
                             } else {
-                                drive(-12, 0, 0.5);
+                                drive(12, 0, 0.5);
                                 while (getRuntime() - startingRuntime < menuController.getDelayBeforeParking());
                             }
-                            if (menuController.getParkNearDS()) drive(0, 24, 0.2);
+                            if (menuController.getParkNearDS()) drive(0, -24, 0.2);
                             else {
-                                timeDrive(0, -0.4, 0, 500);
+                                timeDrive(0, 0.4, 0, 500);
                                 sleep(500);
                                 robot.holonomic.stop();
                             }
@@ -213,454 +203,25 @@ public class AutonomousMeet4 extends LinearOpMode {
 
                     }
                 }
-                else if (menuController.getStartingPosition() == FieldSide.LOADING_ZONE) {
-                    VuforiaLocalizer vuforia = VisionFactory.createVuforia(VisionFactory.CameraType.PHONE_REAR, hardwareMap);
-                    VuforiaController vuforiaController = new VuforiaController(vuforia, telemetry);
-                    vuforiaController.activate();
-
-                    // Drive closer to the stone to see it more reliably
-                    drive(15, 0, .2);
-                    sleep(1000);
-                    Point3D vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                    for (int i = 0; i < 5 & vuforiaTargetPoint == null; i++) {
-                        vuforiaTargetPoint = vuforiaController.analyzeVuforiaResult();
-                        sleep(500);
-                    }
-
-                    Position skystonePosition = Position.RIGHT;
-
-                    if (vuforiaTargetPoint != null) {
-                        telemetry.addData("Skystone y", vuforiaTargetPoint.y);
-                        if (vuforiaTargetPoint.y < 1.0) skystonePosition = Position.LEFT;
-                        else skystonePosition = Position.CENTER;
-                    }
-
-                    telemetry.addData("Skystone position", skystonePosition);
-                    telemetry.update();
-                    double driveToSkystoneDist;
-                    if (menuController.getAllianceColor() == AllianceColor.RED) {
-                        switch (skystonePosition) {
-                            case CENTER:
-                                driveToSkystoneDist = 0.0;
-                                break;
-                            case RIGHT:
-                                driveToSkystoneDist = -7.0;
-                                break;
-                            default:
-                                driveToSkystoneDist = 10.5;
-                                break;
-                        }
-                    } else {
-                        switch (skystonePosition) {
-                            case CENTER:
-                                driveToSkystoneDist = 0.75;
-                                break;
-                            case RIGHT:
-                                driveToSkystoneDist = -6.0;
-                                break;
-                            default:
-                                driveToSkystoneDist = 10.5;
-                                break;
-                        }
-                    }
-
-                    // Drive forwards or back to align with
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            doArmLift(1.257);
-                        }
-                    }).start();
-                    drive(0, driveToSkystoneDist, 0.2);
-                    sleep(2000);
-                    // Rotate to face Skystone
-                    imuPIRotate(-88.0);
-
-                    // PI controller for lifting arm
-
-
-                    /*
-                    IMPORTANT!!! (AKA REALLY IMPORTANT!!!)
-                    Check location of these blocks in case below y value needs to be increased/decreased!!!
-                     */
-                    double targetValue = 33.0;
-                    double currentValue;
-                    double P = 0.04;
-                    double timeAtLastChange = getRuntime();
-                    double lastValue = 100;
-                    while (opModeIsActive() && ((currentValue = robot.frontDistanceSensor.getDistance(DistanceUnit.CM)) > targetValue) && (menuController.getSkystoneRedundancy() ? ((getRuntime() - timeAtLastChange) < 1.5) : true)) {
-                        robot.holonomic.runWithoutEncoder(0, FunctionalExtensionsKt.upperLimit(P * (currentValue - targetValue), 0.15), 0);
-                        telemetry.addData("Target", targetValue);
-                        telemetry.addData("Current", currentValue);
-                        telemetry.addData("Last Time", timeAtLastChange);
-                        telemetry.addData("Last Change", lastValue);
-                        telemetry.update();
-                        if (currentValue != lastValue) {
-                            lastValue = currentValue;
-                            timeAtLastChange = getRuntime();
-                        }
-                    }
-                    robot.holonomic.stop();
-                    //                drive(0, 16, 0.2);
-
-                    while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.68)
-                        robot.intakePivotMotor.setPower(0.01);
-                    robot.intakePivotMotor.setPower(0.12);
-                    drive(0, 5, 0.2);
-                    robot.intakeBlockGrabber.hold();
-                    robot.intakeBlockManipulator.setPower(1);
-                    robot.intakePivotMotor.setPower(0.0);
-                    sleep(1500);
-                    drive(0, -14, 0.4);
-//                    doArmLift();
-                    double intoBuildingZoneDist = 0.0;
-                    if (menuController.getAllianceColor() == AllianceColor.RED) {
-                        switch (skystonePosition) {
-                            case LEFT:
-                                intoBuildingZoneDist += 8;
-                            case CENTER:
-                                intoBuildingZoneDist += 8;
-                            case RIGHT:
-                                intoBuildingZoneDist += 44;
-                        }
-                    } else {
-                        switch (skystonePosition) {
-                            case RIGHT:
-                                intoBuildingZoneDist -= 8;
-                            case CENTER:
-                                intoBuildingZoneDist -= 8;
-                            case LEFT:
-                                intoBuildingZoneDist -= 44;
-
-                        }
-                    }
-                    drive(intoBuildingZoneDist, 0, 0.2);
-                    doArmLift(1.257);
-                    robot.intakeBlockGrabber.release();
-                    robot.intakeBlockManipulator.setPower(-1);
-                    sleep(500);
-                    robot.intakePivotMotor.setPower(0.0);
-
-
-                    if (menuController.getAllianceColor() == AllianceColor.RED) drive(-20, 0, 0.2);
-                    else drive(20, 0, 0.2);
-                    robot.intakePivotMotor.setPower(0.0);
-                    if (menuController.getParkNearDS()) timeDrive(0, -0.7, 0, 750);
-                    else timeDrive(0, 0.4, 0, 750);
-                }
                 else { // FIELD POSITION IS LOADING ZONE!!!
+                    OpenCvContainer<PixelStatsPipeline> container = VisionFactory.createOpenCv(
+                            VisionFactory.CameraType.WEBCAM,
+                            hardwareMap,
+                            new PixelStatsPipeline(menuController.getVisionDetector()));
+                    sleep(2000);
 
-                    double xDistance = 0.0;
+                    Position skystonePosition = container.getPipeline().getSkystonePos();
 
-                    System.out.println("BEEEEEEEEN");
-                    // Lift arm
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            doArmLift(1.68);
-                        }
-                    }).start();
-
-                    drive(0, 28, .4);
-                    if (menuController.getAllianceColor() == AllianceColor.RED) {
-                        drive(-25, 0, .4);
-                        timeDrive(-0.4, 0, 0, 750);
-//                        drive(-5, 0, .2);
-                    } else {
-                        drive(29, 0, .4);
-//                        timeDrive(0.4, 0, 0, 750);.
-//                        drive(5, 0, .2);
-                    }
-//                    timeDrive(-0.5, 0, 0, TIMEMS);
-
-                    drive(0, 6.5, .3);
-
-                    Position skystonePosition = Position.RIGHT;
-                    double leftRed;
-                    double leftGreen;
-                    double leftBlue;
-                    double leftBlue15;
-                    double leftRedGreenAvg;
-                    double rightRed;
-                    double rightGreen;
-                    double rightBlue;
-                    double rightBlue15;
-                    double rightRedGreenAvg;
-                    boolean leftIsStone = ((double) (leftRedGreenAvg = (((leftRed = robot.leftColorSensor.red()) + (leftGreen = robot.leftColorSensor.green())) / 2)) > (leftBlue15 = 1.5 * (leftBlue = robot.leftColorSensor.blue())));
-                    boolean rightIsStone = ((double) (rightRedGreenAvg = (((rightRed = robot.rightColorSensor.red()) + (rightGreen = robot.rightColorSensor.green())) / 2)) > (rightBlue15 = 1.5 * (rightBlue = robot.rightColorSensor.blue())));
-
-
-                    if (leftIsStone & !rightIsStone) {
-
-                        if (menuController.getAllianceColor() == AllianceColor.RED) {
-                            skystonePosition = Position.CENTER;
-                            drive(4.80, 0, 0.4);
-
-                            // TODO set driving distance, should be positive
-                            xDistance = 160;
-                        } else {
-                            skystonePosition = Position.RIGHT;
-                            drive(-11.5, 0, 0.4);
-
-                            // TODO set driving distance, should be negative
-                            xDistance = -112;
-                        }
-
-                    } else if (!leftIsStone & rightIsStone) {
-
-                        if (menuController.getAllianceColor() == AllianceColor.RED) {
-                            skystonePosition = Position.LEFT;
-                            drive(21, 3, 0.4);
-
-                            // TODO set driving distance, should be positive
-                            xDistance = 120;
-
-                        } else {
-                            skystonePosition = Position.CENTER;
-                            drive(-4, 3, 0.4);
-
-                            // TODO set driving distance, should be negative
-                            xDistance = -120;
-                        }
-
-                    } else {
-
-                        if (menuController.getAllianceColor() == AllianceColor.RED) {
-                            skystonePosition = Position.RIGHT;
-                            drive(12, 0, 0.4);
-
-                            // TODO set driving distance, should be positive
-                            xDistance = 115;
-                        } else {
-                            skystonePosition = Position.LEFT;
-                            drive(-11.5, 3, 0.4);
-
-                            // TODO set driving distance, should be negative
-                            xDistance = -112;
-                        }
-
-                    }
-
-                    System.out.println("leftIsStone" + leftIsStone);
-                    System.out.println("leftRed" + leftRed);
-                    System.out.println("leftGreen" + leftGreen);
-                    System.out.println("leftBlue" + leftBlue);
-                    System.out.println("leftBlue 1.5" + leftBlue15);
-                    System.out.println("leftRG avg" + leftRedGreenAvg);
-                    telemetry.addLine();
-                    System.out.println("rightIsStone" + rightIsStone);
-                    System.out.println("rightRed" + rightRed);
-                    System.out.println("rightGreen" + rightGreen);
-                    System.out.println("rightBlue" + rightBlue);
-                    System.out.println("rightBlue 1.5" + rightBlue15);
-                    System.out.println("rightRG avg" + rightRedGreenAvg);
-                    System.out.println("Skystone position" + skystonePosition);
-                    telemetry.update();
-
-                    sleep(1000);
-
-                    drive(0, 5, 0.6);
-                    robot.intakeBlockGrabber.hold();
-                    sleep(500);
-                    robot.intakeBlockManipulator.setPower(1);
-                    sleep(250);
-                    drive(0, -11, .4);
-//                    drive(95,0, 0.7);
-//                    timeDrive(0.6, 0, 0, 500);
-//                    {
-//                        double p1 = 0.012;
-//                        double i1 = 0.005;
-//                        double d1 = 0.0;
-//                        double c1 = 100.0;
-//                        double t1 = cmToIn(39.0);
-//                        double errorSum = 0;
-//
-//
-//                        double p2 = 1.0;
-//                        double i2 = 0.0;
-//                        double d2 = 0.0;
-//                        double t2 = imuController.getHeading();
-//
-//                        double startingRuntime = getRuntime();
-//                        double lastXError;
-//                        double errorDeriv;
-//                        boolean invalidate = false;
-//                        boolean invalidated = false;
-//                        double e1;
-//                        if (menuController.getAllianceColor() == AllianceColor.RED) lastXError = cmToIn(robot.rightDistanceSensor.cmUltrasonic()) -t1;
-//                        else lastXError = cmToIn(robot.leftDistanceSensor.cmUltrasonic()) - t1;
-//
-//                        while (((c1 > t1  | Double.isNaN(c1) | getRuntime()-startingRuntime<1.6  | (invalidate=((Math.abs(errorDeriv=(e1=c1-t1)) > 25)))) & opModeIsActive())) {
-//                            if (menuController.getAllianceColor() == AllianceColor.RED) c1 = cmToIn(robot.rightDistanceSensor.cmUltrasonic());
-//                            else c1 = cmToIn(robot.leftDistanceSensor.cmUltrasonic());
-//
-//                            e1 = c1 - t1;
-//
-//                            System.out.println("\n---------E1 = "+e1);
-//                            System.out.println("---------------C1 = "+c1);
-//                            System.out.println("---------------LXE = "+lastXError);
-//                            System.out.println("---------------abs e1-lxe="+Math.abs(e1-lastXError));
-//                            System.out.println("---------------abs e1-lxe CAUGHT="+(Math.abs(e1-lastXError)>25));
-//                            System.out.println("---------------invalidate= "+invalidate);
-//                            System.out.println("starting runtime: "+startingRuntime + "    current: "+getRuntime()+ "   error: " + (getRuntime()-startingRuntime));
-//                            double e2 = imuController.getHeading() - t2;
-//                            if (e1 <= 30) {
-//                                errorSum += e1;
-//                            }
-//                            if (menuController.getAllianceColor()==AllianceColor.RED)
-//                                robot.holonomic.runWithoutEncoder((p1 * e1 + i1 * errorSum), 0, p2 * e2);
-//                            else
-//                                robot.holonomic.runWithoutEncoder(-(p1 * e1 + i1 * errorSum), 0, p2 * e2);
-//
-//                            telemetry.addData("x target", t1);
-//                            telemetry.addData("x current", c1);
-//                            telemetry.addData("x error", e1);
-//                            telemetry.addData("heading target", t2);
-//                            telemetry.addData("heading error", e2);
-//                            telemetry.update();
-//                            lastXError = e1;
-//                        }
-//                        System.out.println("\n---------E1 = "+e1);
-//                        System.out.println("---------------C1 = "+c1);
-//                        System.out.println("---------------LXE = "+lastXError);
-//                        System.out.println("---------------abs e1-lxe="+Math.abs(e1-lastXError));
-//                        System.out.println("---------------abs e1-lxe CAUGHT="+(Math.abs(e1-lastXError)>25));
-//                        System.out.println("starting runtime: "+startingRuntime + "    current: "+getRuntime()+ "   error: " + (getRuntime()-startingRuntime));
-//                        System.out.println("---------------FINAL C1"+c1);
-//                    }
-
-                    {
-                        double p1 = 0.0007;
-                        double i1 = 0.005;
-                        double d1 = 0.0;
-                        double c1 = 100.0;
-                        double t1 = findAvgXDist(xDistance);
-                        double errorSum = 0;
-
-
-                        double p2 = 1.5;
-                        double i2 = 0.0;
-                        double d2 = 0.0;
-                        double t2 = imuController.getHeading();
-
-                        double startingRuntime = getRuntime();
-
-                        double e1;
-                        robot.holonomic.setMotorsMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                        robot.holonomic.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                        while (((c1 > t1 | Double.isNaN(c1) | getRuntime() - startingRuntime < 1.6)) & opModeIsActive()) {
-                            c1 = avgReadEncoderDistances();
-
-                            e1 = c1 - t1;
-
-                            System.out.println("\n---------E1 = " + e1);
-                            System.out.println("---------------C1 = " + c1);
-//                            System.out.println("---------------LXE = "+lastXError);
-//                            System.out.println("---------------abs e1-lxe="+Math.abs(e1-lastXError));
-//                            System.out.println("---------------abs e1-lxe CAUGHT="+(Math.abs(e1-lastXError)>25));
-//                            System.out.println("---------------invalidate= "+invalidate);
-                            System.out.println("starting runtime: " + startingRuntime + "    current: " + getRuntime() + "   error: " + (getRuntime() - startingRuntime));
-                            double e2 = imuController.getHeading() - t2;
-                            if (e1 <= 30) {
-                                errorSum += e1;
-                            }
-                            if (menuController.getAllianceColor() == AllianceColor.RED)
-                                robot.holonomic.runWithoutEncoder(-(p1 * e1 + i1 * errorSum), 0, p2 * e2);
-                            else
-                                robot.holonomic.runWithoutEncoder(-(p1 * e1 + i1 * errorSum), 0, p2 * e2);
-
-                            telemetry.addData("x target", t1);
-                            telemetry.addData("x current", c1);
-                            telemetry.addData("x error", e1);
-                            telemetry.addData("heading target", t2);
-                            telemetry.addData("heading error", e2);
-                            telemetry.update();
-//                            lastXError = e1;
-                        }
-//                        System.out.println("\n---------E1 = "+e1);
-//                        System.out.println("---------------C1 = "+c1);
-//                        System.out.println("---------------LXE = "+lastXError);
-//                        System.out.println("---------------abs e1-lxe="+Math.abs(e1-lastXError));
-//                        System.out.println("---------------abs e1-lxe CAUGHT="+(Math.abs(e1-lastXError)>25));
-//                        System.out.println("starting runtime: "+startingRuntime + "    current: "+getRuntime()+ "   error: " + (getRuntime()-startingRuntime));
-//                        System.out.println("---------------FINAL C1"+c1);
-                    }
-
-//                    drive(xDistance, 4, 0.5);
-
-                    robot.holonomic.stop();
-
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            doArmLift(1.237);
-                        }
-                    }).start();
-
-//                    drive(0, 12, .5);
-                    sleep(500);
-                    double distLeft;
-                    double distRight;
-                    while (opModeIsActive() & ((distLeft = robot.leftColorDistanceSensor.getDistance(DistanceUnit.CM)) > 10 | (distRight = robot.rightColorDistanceSensor.getDistance(DistanceUnit.CM)) > 10 | Double.isNaN(distRight) | Double.isNaN(distLeft))) {
-                        robot.holonomic.runWithoutEncoder(0, 0.3, 0);
-                        telemetry.addData("dist left", distLeft);
-                        telemetry.addData("dist right", distRight);
-                        telemetry.update();
-                    }
-                    robot.holonomic.stop();
-                    robot.intakeBlockGrabber.release();
-                    robot.intakeBlockManipulator.setPower(-1.0);
-                    sleep(1000);
-                    robot.intakeBlockManipulator.setPower(0.0);
-                    drive(0, -8, 0.5);
-                    double temp = robot.frontDistanceSensor.getDistance(DistanceUnit.INCH);
-                    turn(180, 0.5);
-                    robot.foundationGrabbers.setPosition(0.43);
-                    sleep(250);
-                    drive(0, -temp * .9333 + .4216, 0.5);
-                    robot.foundationGrabbers.lock();
-                    sleep(750);
-                    robot.intakePivotMotor.setPower(0);
-//                    drive(0, 35, 0.8);
-//                    drive(0, 5, .3);
-                    timeDrive(0, 0.5, 0, 2000);
-
-//                        timeDrive(0, 0.5, 0, 2000);
-                    // Release the foundation grabbers
-                    robot.foundationGrabbers.unlock();
-                    sleep(1000);
-                    // Drive toward the alliance bridge to start moving around the foundation
 
                     if (menuController.getAllianceColor() == AllianceColor.RED) {
-                        drive(35, 0, 0.2);
-                        // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -18, 0.2);
-                        if (menuController.getFoundationRedundancy()) {
-                            drive(-20, 0, 0.2);
-                            drive(35, -5, .7);
-                        } else {
-                            drive(28, -7, .7);
-                        }
-
-                    } else {
-                        drive(-35, 0, 0.2);
-                        // Drive parallel to the bridges to move to the other side of the foundation
-                        drive(0, -18, 0.2);
-                        if (menuController.getFoundationRedundancy()) {
-                            drive(20, 0, 0.2);
-                            drive(-35, -5, .7);
-                        } else {
-                            drive(-28, -7, .7);
+                        if (skystonePosition == Position.LEFT) {
+                            skystonePosition = Position.CENTER;
                         }
                     }
 
+                    drive(0, 29.5, 0.4);
 
-                    if (menuController.getParkNearDS()) drive(0, 24, 0.2);
-                    else {
-                        timeDrive(0, -0.4, 0, 500);
-                        sleep(500);
-                        robot.holonomic.stop();
-                    }
+
                 }
             }
         /*
