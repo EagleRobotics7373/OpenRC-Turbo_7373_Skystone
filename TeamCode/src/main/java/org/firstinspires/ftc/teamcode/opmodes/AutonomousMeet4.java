@@ -1,47 +1,65 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.teamcode.library.functions.AllianceColor;
 import org.firstinspires.ftc.teamcode.library.functions.ExtDirMusicPlayer;
 import org.firstinspires.ftc.teamcode.library.functions.FieldSide;
 import org.firstinspires.ftc.teamcode.library.functions.FunctionalExtensionsKt;
-import org.firstinspires.ftc.teamcode.library.functions.Point3D;
 import org.firstinspires.ftc.teamcode.library.functions.Position;
 import org.firstinspires.ftc.teamcode.library.robot.robotcore.BasicRobot;
 import org.firstinspires.ftc.teamcode.library.robot.robotcore.IMUController;
 import org.firstinspires.ftc.teamcode.library.vision.skystone.VisionFactory;
-import org.firstinspires.ftc.teamcode.library.vision.skystone.VuforiaController;
 import org.firstinspires.ftc.teamcode.library.vision.skystone.opencv.OpenCvContainer;
 import org.firstinspires.ftc.teamcode.library.vision.skystone.opencv.PixelStatsPipeline;
+import org.firstinspires.ftc.teamcode.opmodes.control.IMUPIDStrafer;
 
+import kotlin.jvm.functions.Function0;
+
+@Config
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous", group = "Main")
 public class AutonomousMeet4 extends LinearOpMode {
     BasicRobot robot;
     IMUController imuController;
+    MultipleTelemetry telem;
     boolean goingRight = false;
+    public static double distanceToDriveCrossField = 77;
+    public static double distanceAddPerSkystone = 7.5;
+    public static double centerStrafeTarget = 2.5;
+    public static double yPowerForRobotPush = -0.25;
+    public static double shoveDist = 32;
+    public static double parkDist = 26;
+    public static PIDCoefficients rotationalStoneStrafePID = new PIDCoefficients(1, 0, 0);
     public static int TIMEMS = 1500;
-
+    public static int posNum = 0;
     @Override
     public void runOpMode() throws InterruptedException {
-
+        telem = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         /*
                 Initialize main autonomous variables
          */
+
         robot = new BasicRobot(hardwareMap);
         imuController = new IMUController(hardwareMap, AxesOrder.ZYX);
-        AutoMenuControllerIterative menuController = new AutoMenuControllerIterative(telemetry);
+        final AutoMenuControllerIterative menuController = new AutoMenuControllerIterative(telemetry);
         robot.intakeBlockGrabber.release();
 
         /*
                 Operate telemetry menu
          */
+        OpenCvContainer<PixelStatsPipeline> container = VisionFactory.createOpenCv(
+                VisionFactory.CameraType.WEBCAM,
+                hardwareMap,
+                new PixelStatsPipeline(PixelStatsPipeline.StatsDetector.DETECTOR_VALUE_STDDEV));
         while (!isStarted() && !isStopRequested()) {
             if (gamepad1.dpad_up) {
                 menuController.menu.previousItem();
@@ -57,8 +75,8 @@ public class AutonomousMeet4 extends LinearOpMode {
                 while (gamepad1.dpad_right && !isStopRequested()) ;
             }
         }
-
         waitForStart();
+        container.getPipeline().setDetector(menuController.getVisionDetector());
         double startLeftDist = robot.leftDistanceSensor.getDistance(DistanceUnit.INCH);
         if (!isStopRequested()) {
         /*
@@ -164,6 +182,7 @@ public class AutonomousMeet4 extends LinearOpMode {
 
                         // Drive to the foundation
                         drive(0, 29, 0.4);
+
                         sleep(250);
                         telemetry.addData("blab blab blab", "wow taco");
                         telemetry.update();
@@ -204,30 +223,206 @@ public class AutonomousMeet4 extends LinearOpMode {
                     }
                 }
                 else { // FIELD POSITION IS LOADING ZONE!!!
-                    OpenCvContainer<PixelStatsPipeline> container = VisionFactory.createOpenCv(
-                            VisionFactory.CameraType.WEBCAM,
-                            hardwareMap,
-                            new PixelStatsPipeline(menuController.getVisionDetector()));
-                    sleep(2000);
-
+                    container.getPipeline().setDetector(menuController.getVisionDetector());
+                    doArmLift(1.153);
+                    container.getPipeline().setTracking(true);
+                    while (container.getPipeline().getTracking()) sleep(50);
                     Position skystonePosition = container.getPipeline().getSkystonePos();
 
+//                    Position skystonePosition;
+//                    switch (posNum) {
+//                        case 0: skystonePosition = Position.LEFT; break;
+//                        case 1: skystonePosition = Position.RIGHT; break;
+//                        default: skystonePosition = Position.NULL; break;
+//                    }
 
+                    robot.odometryXAxis.resetHWCounter();
+
+                    drive(0, 26, 0.4);
+
+                    sleep(500);
+                    Position originalSkystonePos = skystonePosition;
+                    final double stoneStrafeTarget;
+                    double crossFieldStrafeTarget = distanceToDriveCrossField;
                     if (menuController.getAllianceColor() == AllianceColor.RED) {
                         if (skystonePosition == Position.LEFT) {
                             skystonePosition = Position.CENTER;
+                            stoneStrafeTarget = -1 - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                            crossFieldStrafeTarget += distanceAddPerSkystone*1;
+                        } else if (skystonePosition == Position.RIGHT) {
+                            stoneStrafeTarget = distanceAddPerSkystone - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                        } else {
+                            skystonePosition = Position.LEFT;
+                            stoneStrafeTarget = -distanceAddPerSkystone - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                            crossFieldStrafeTarget += distanceAddPerSkystone*2;
+                        }
+                    } else {
+                        if (skystonePosition == Position.LEFT) {
+                            skystonePosition = Position.CENTER;
+                            crossFieldStrafeTarget += distanceAddPerSkystone;
+                            stoneStrafeTarget = -1 - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                        } else if (skystonePosition == Position.RIGHT) {
+                            stoneStrafeTarget = distanceAddPerSkystone - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                            crossFieldStrafeTarget += distanceAddPerSkystone*2;
+                        } else {
+                            skystonePosition = Position.LEFT;
+                            stoneStrafeTarget = -distanceAddPerSkystone - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
                         }
                     }
 
-                    drive(0, 29.5, 0.4);
+                    telem.addData("Skystone position", skystonePosition);
+                    telem.addData("Skystone original", originalSkystonePos);
+                    telem.addData("Odometry error", robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH));
+                    telem.addData("Strafe target", stoneStrafeTarget);
+                    telem.addData("CrossField Target", crossFieldStrafeTarget);
+                    telem.update();
+                    sleep(1000);
+                    robot.odometryXAxis.resetHWCounter();
+                    IMUPIDStrafer stoneStrafer = new IMUPIDStrafer(
+                            robot.holonomic,
+                            imuController,
+                            new PIDCoefficients(0.2, 0.0000013, 0),
+                            rotationalStoneStrafePID,
+                            new Function0<Double>() {
+                                @Override
+                                public Double invoke() {
+                                    return stoneStrafeTarget - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                                }
+                            }
+                    );
+                    stoneStrafer.setStartingLimit(19000, 0.2);
+
+                    while(Math.abs(stoneStrafer.getStrafeErrorFun().invoke()) > 0 & opModeIsActive() & (System.currentTimeMillis()-stoneStrafer.getStartingRuntime()<3000)) stoneStrafer.run();
+
+//                    while (Math.abs(stoneStrafeTarget) - Math.abs(robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH)) > 0.5 & opModeIsActive()) {
+//                        robot.holonomic.runWithoutEncoder(0.3 * ((stoneStrafeTarget<0)?-1:1), 0, 0);
+//                    }
+
+                    robot.holonomic.stop();
+
+                    while (opModeIsActive() && robot.intakePivotPotentiometer.getVoltage() < 1.6)
+                        robot.intakePivotMotor.setPower(0.01);
+                    robot.intakePivotMotor.setPower(0.12);
+
+                    drive(0, 7, 0.2);
+                    robot.intakeBlockGrabber.hold();
+                    robot.intakeBlockManipulator.setPower(1);
+                    robot.intakePivotMotor.setPower(0.0);
+
+                    sleep(500);
+
+                    drive(0, -8.5, 0.3);
+
+                    robot.odometryXAxis.resetHWCounter();
 
 
+                    final double finalCrossFieldStrafeTarget = crossFieldStrafeTarget;
+                    PIDCoefficients straferPID = new PIDCoefficients(0.55, 0, 0);
+                    IMUPIDStrafer crossFieldStrafer = new IMUPIDStrafer(
+                            robot.holonomic,
+                            imuController,
+                            straferPID,
+                            new PIDCoefficients(1.75, 0, 0),
+                            new Function0<Double>() {
+                                @Override
+                                public Double invoke() {
+                                    return (menuController.getAllianceColor()==AllianceColor.RED)?1.0:-1.0;
+                                }
+                            }
+                    );
+//                    crossFieldStrafer.setStartingLimit(19000, 0.4);
+                    robot.odometryXAxis.resetSWCounter();
+                    while (Math.abs(finalCrossFieldStrafeTarget)-Math.abs(robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH)) > 5 && opModeIsActive()) crossFieldStrafer.run();
+                    straferPID.p = 0.2;
+                    Thread armLiftPostStrafe = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+//                            doArmLift(1.13);
+                            if (robot.intakePivotPotentiometer.getVoltage()<1.366) {
+                                robot.intakePivotMotor.setPower(0.01);
+                                while (robot.intakePivotPotentiometer.getVoltage()<1.366);
+                            } else doArmLift(1.366);
+                            robot.intakePivotMotor.setPower(0.12);
+                        }
+                    });
+                    armLiftPostStrafe.start();
+                    while (Math.abs(finalCrossFieldStrafeTarget)-Math.abs(robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH)) > 1 && opModeIsActive()) crossFieldStrafer.run();
+                    robot.holonomic.stop();
+                    drive(0, 11, 0.5);
+                    robot.holonomic.stop();
+                    robot.foundationGrabbers.lock();
+                    sleep(1500);
+                    robot.intakeBlockGrabber.release();
+                    robot.intakeBlockManipulator.setPower(-1);
+                    sleep(1500);
+                    robot.intakeBlockManipulator.setPower(0);
+                    Thread armLiftPostDrop = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            doArmLift(1.1);
+                        }
+                    });
+                    armLiftPostDrop.start();
+
+                    timeDrive(0, -0.5, 0, 2000);
+
+                    robot.foundationGrabbers.unlock();
+
+                    robot.odometryXAxis.resetHWCounter();
+
+                    straferPID.p = 0.4;
+                    {
+                        final double strafeTarget = (menuController.getPushAlliancePartner())?(shoveDist * (menuController.getAllianceColor()==AllianceColor.RED?-1:1)):(parkDist * (menuController.getAllianceColor()==AllianceColor.RED?-1:1));
+                    IMUPIDStrafer parkingStrafer = new IMUPIDStrafer(
+                            robot.holonomic,
+                            imuController,
+                            new PIDCoefficients(0.005, 0.0000022,0),
+                            new PIDCoefficients(1.75, 0, 0),
+                            new Function0<Double>() {
+                                @Override
+                                public Double invoke() {
+                                    return strafeTarget - robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH);
+                                }
+                            }
+                    );
+
+                    while (Math.abs(parkingStrafer.getStrafeErrorFun().invoke())>1 & opModeIsActive()) {
+                        parkingStrafer.run();
+                    }}
+                    robot.holonomic.stop();
+                    sleep(500);
+//                    drive(5 * ((menuController.getAllianceColor()==AllianceColor.RED)?1.0:-1.0),0,0.4);
+                    robot.odometryXAxis.resetHWCounter();
+                    straferPID.p = 0.25;
+                    if (menuController.getPushAlliancePartner()) {
+                        IMUPIDStrafer odometryAwayFromParkedBotStrafer = new IMUPIDStrafer(
+                            robot.holonomic,
+                            imuController,
+                            straferPID,
+                            new PIDCoefficients(1.75, 0, 0),
+                            new Function0<Double>() {
+                                @Override
+                                public Double invoke() {
+                                    return (menuController.getAllianceColor()==AllianceColor.RED)?1.0:-1.0;
+                                }
+                            }
+                        );
+                        odometryAwayFromParkedBotStrafer.setYPower(yPowerForRobotPush);
+
+                        while (1.35-Math.abs(robot.odometryXAxis.getDistanceNormalized(DistanceUnit.INCH)) > 0 && opModeIsActive()) odometryAwayFromParkedBotStrafer.run();
+                        robot.holonomic.stop();
+                    }
+                    robot.intakePivotMotor.setPower(0.0);
+                    timeDrive(0, -0.4, 0, 500);
+                    drive(0, 28, 0.5);
+                    drive(-18 * ((menuController.getAllianceColor()==AllianceColor.RED)?1.0:-1.0), 0, 0.5);
                 }
             }
         /*
                 End of OpMode - close resources
          */
-            player.stop();
+        while (opModeIsActive());
+        player.stop();
         }
     }
 
@@ -289,7 +484,7 @@ public class AutonomousMeet4 extends LinearOpMode {
             telemetry.addData("Current", currentValue);
             telemetry.update();
         }
-        robot.intakePivotMotor.setPower(0.07);
+        robot.intakePivotMotor.setPower(0.12);
     }
 
     private void timeDrive(double x, double y, double z, long timeMs) {
