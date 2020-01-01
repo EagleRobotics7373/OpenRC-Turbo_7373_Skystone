@@ -17,7 +17,6 @@ class BasicRobot(private val hardwareMap: HardwareMap) {
      @JvmField val intakeBlockManipulator  : DcMotor               = hwInit("intakeBlockManipulator")
      @JvmField val intakePivotMotor        : DcMotor               = hwInit("intakePivotMotor")
 
-
     // Servo Variables
      private   val foundationServo         : Servo                 = hwInit("foundationServo")
      private   val intakeGrabberServo      : Servo                 = hwInit("intakeGrabberServo")
